@@ -1,6 +1,9 @@
+import os
+
 import openai
 
 from bot import Researcher
+from util import save_file
 
 class ArxivGPT:
     def __init__(self, 
@@ -21,7 +24,12 @@ class ArxivGPT:
             return None
         print("Saving completions to file")
         self.researcher.save_completions(f'arxiv_{to_snake_case(summary.title)}_paper')
-        print("Posting article to medium")
-        print(f'Tokens: {self.researcher.total_tokens}')
-        return self.post_to_medium([summary], f'Arxiv paper: {summary.title}')
+        print(f'Total Tokens Used: {self.researcher.total_tokens}')
+
+        print('Saving Summary')
+        if not os.path.exists('summaries'):
+            os.mkdir('summaries')
+
+        summary_text = f'{summary.title}\n\n{summary.text}'
         
+        save_file(f'summaries/{paper_id}_summary.txt', summary_text)

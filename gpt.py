@@ -15,7 +15,7 @@ class GptChat:
     conversations: List[Conversation]
 
     def __init__(self, system_prompt_file: str) -> None:
-        self.system_prompt = open_file('../prompts/' + system_prompt_file + '.prompt')
+        self.system_prompt = open_file('prompts/' + system_prompt_file + '.prompt')
         self.encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         self.system_prompt_tokens = len(self.encoding.encode(self.system_prompt))
         self.messages = []

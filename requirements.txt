@@ -1,4 +1,4 @@
 tiktoken
 openai
-BeautifulSoup
+BeautifulSoup4
 PyPDF2

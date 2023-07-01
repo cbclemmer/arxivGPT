@@ -1,11 +1,13 @@
 import io
+import os
 from typing import List, Tuple
 
 import PyPDF2
 import requests
-import BeautifulSoup
+from bs4 import BeautifulSoup
 
 from gpt import GptChat
+from util import save_file
 from objects import Conversation, Prompt, Summary
 
 class Bot(GptChat):
@@ -65,7 +67,7 @@ class Researcher(Bot):
         self.summarizer = ReaserchSummarizer()
 
     # Returns (Title, Abstract)
-    def get_abstract(paper_id: str) -> Tuple[str, str]:
+    def get_abstract(self, paper_id: str) -> Tuple[str, str]:
         abs_url = f'https://arxiv.org/abs/{paper_id}'
         response = requests.get(abs_url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -73,7 +75,7 @@ class Researcher(Bot):
         return (soup.title.string, abstract_elem.text)
     
     # returns (text, num_pages)
-    def get_paper_text(paper_id: str) -> Tuple[str, str]:
+    def get_paper_text(self, paper_id: str) -> Tuple[str, str]:
         pdf_url = f'https://arxiv.org/pdf/{paper_id}.pdf'
         response = requests.get(pdf_url)
         if response.status_code != 200:
@@ -99,11 +101,11 @@ class Researcher(Bot):
 
         print("Downloading pdf")
         (text, num_pages) = self.get_paper_text(paper_id)
-        total_tokens = self.encoding.encode(text) 
-        print(f"Paper has {num_pages} pages and {len(total_tokens)} total tokens")
+        tokens = self.encoding.encode(text) 
+        print(f"Paper has {num_pages} pages and {len(tokens)} total tokens")
 
         if len(tokens) > max_tokens:
-            print(f'Token count over read limit, removing {len(total_tokens) - max_tokens} tokens')
+            print(f'Token count over read limit, removing {len(tokens) - max_tokens} tokens')
             print('Consider raising the maximum read tokens')
             tokens = tokens[:max_tokens]
             if input('Continue?(Y/n): ') != 'Y':
@@ -114,11 +116,15 @@ class Researcher(Bot):
         summary_list = []
         last_summary = ''
         overall_summary = ''
+        log = f'{title} Reading Log\n'
         while len(tokens) > 0:
             chunk = tokens[:chunk_size]
             tokens = tokens[chunk_size:]
             last_summary = self.read_chunk(overall_summary, chunk, first, notes)
             summary_list.append(last_summary)
+
+            log += f'Chunk:\n{chunk}\nSummary:\n{last_summary}\n\n\n'
+
             if len(summary_list) > 4:
                 summary_list = summary_list[1:5]
             if len(summary_list) > 1:
@@ -128,9 +134,16 @@ class Researcher(Bot):
             print(f'\n\n\nOverall Summary:{overall_summary}\n\n\n')
             print(f'\n\n\nCurrent Summary:{last_summary}\n\n\n')
             processed_tokens += chunk_size
-            print(f"Processed {processed_tokens} of {total_tokens} tokens")
+            print(f"Processed {processed_tokens} of {len(tokens)} tokens")
         self.reset_chat()
         
+        log += f'Overall Summary:\n{overall_summary}'
+
+        print('Saving Log')
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        save_file(f'logs/arxiv_{paper_id}.txt', log)
+
         pdf_url = f'https://arxiv.org/pdf/{paper_id}.pdf'
         return Summary(title, overall_summary, pdf_url)
     
