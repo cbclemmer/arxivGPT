@@ -123,7 +123,7 @@ class Researcher(Bot):
             last_summary = self.read_chunk(overall_summary, chunk, first, notes)
             summary_list.append(last_summary)
 
-            log += f'Chunk:\n{chunk}\nSummary:\n{last_summary}\n\n\n'
+            log += f'Chunk:\n{self.encoding.decode(chunk)}\nSummary:\n{last_summary}\n\n\n'
 
             if len(summary_list) > 4:
                 summary_list = summary_list[1:5]
