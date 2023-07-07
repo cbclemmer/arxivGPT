@@ -62,7 +62,7 @@ What should I keep in mind while reading the paper? (leave blank if no notes)
 Notes: How does the size of a language model affect its performance?
 ```  
   
-The paper will then be read into gpt3 2500 tokens at a time and the bot will return a summary of the text with a maximum of 500 tokens.
+The paper will then be read into the chat gpt3.5 api 2500 tokens at a time and the bot will return a summary of the text with a maximum of 500 tokens.
 Once 4 chunks of text has been summarized, another bot will summarize the summaries. That summary will be prepended to the list of summaries for the next overall summarization.
 This process will repeat until the paper is finished or the maximum token count is reached. The last overall summary will be used as the final output.
 
