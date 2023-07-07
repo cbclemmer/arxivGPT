@@ -1,6 +1,6 @@
 ### ArxivGPT
   
-This is a bot that uses open AI's GPT3 api to read a research paper from arxiv.  
+This is a bot that uses open AI's Chatn GPT3.5 (the chat model, not the davinci model) api to read a research paper from arxiv.  
   
 ### Setup
 Install libraries: `pip install -r requirements.txt`  
