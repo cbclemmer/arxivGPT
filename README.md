@@ -67,11 +67,14 @@ Once 4 chunks of text has been summarized, another bot will summarize the summar
 This process will repeat until the paper is finished or the maximum token count is reached. The last overall summary will be used as the final output.
 
 ### Output Folders
-**Logs:**  
+**logs/**  
 All output written to the screen is saved to this folder. It is the most verbose and probably the least useful.  
   
-**Completions:**  
+**completions/**  
 Every prompt and completion given to gpt3 is saved in this folder. Useful for training your own bot (depends on a 4k+ context length).  
   
-**Summaries:**  
+**summaries/**  
 The final overall summary of the paper. This is the summarization of the paper, and it should also contain useful information about your notes you gave the bot.
+
+**papers/**  
+The pdf downloaded to analyze, saved as `papers/[paper_id].pdf`

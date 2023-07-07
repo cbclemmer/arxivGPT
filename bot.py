@@ -81,6 +81,12 @@ class Researcher(Bot):
         if response.status_code != 200:
             print("Could not find pdf for paper")
             return None
+        paper_file_name = paper_id.replace('.', '') + '.pdf'
+        if not os.path.exists(paper_file_name):
+            if not os.path.exists('papers'):
+                os.mkdir('papers')
+            with open('papers/' + paper_file_name, 'wb') as f:
+                f.write(response.content)
         pdfReader = PyPDF2.PdfReader(io.BytesIO(response.content))
         text = ''
         for page_num in range(0, len(pdfReader.pages)):
