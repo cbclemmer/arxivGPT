@@ -4,7 +4,7 @@ This is a bot that uses open AI's Chat GPT3.5 (the chat model, not the davinci m
   
 ### Setup
 Install libraries: `pip install -r requirements.txt`  
-Create config.json in root directory it should look something like this:
+Create `config.json` in root directory it should look something like this:
 ```
 {
   "openai_key": "[API_KEY]",
