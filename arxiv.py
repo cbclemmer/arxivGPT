@@ -4,6 +4,7 @@ import openai
 
 from bot import Researcher
 from util import save_file
+from generate_html import generate_html
 
 class ArxivGPT:
     def __init__(self, 
@@ -15,7 +16,7 @@ class ArxivGPT:
 
     def read_paper(self, paper_id: str, max_tokens: int):
         def to_snake_case(string):
-            string = string.lower().replace(' ', '_').replace('-', '_')
+            string = string.lower().replace(' ', '_').replace('-', '_').replace(',', '')
             return ''.join(['_' + i.lower() if i.isupper() else i for i in string]).lstrip('_')
         
         summary = self.researcher.read_paper(paper_id, max_tokens)
@@ -23,7 +24,13 @@ class ArxivGPT:
             print("Error occured, exiting")
             return None
         print("Saving completions to file")
-        self.researcher.save_completions(f'arxiv_{to_snake_case(summary.title)}_paper')
+        completion_file = f'arxiv_{to_snake_case(summary.title)}_paper'
+        self.researcher.save_completions(completion_file)
+        if not os.path.exists('html_logs'):
+            os.mkdir('html_logs')
+        html = generate_html(summary.title, completion_file)
+        save_file(f'html_logs/{completion_file}.html', html)
+
         print(f'Total Tokens Used: {self.researcher.total_tokens}')
 
         print('Saving Summary')
