@@ -1,5 +1,7 @@
 import io
 import os
+import tarfile
+import gzip
 from typing import List, Tuple
 
 import PyPDF2
@@ -9,6 +11,8 @@ from bs4 import BeautifulSoup
 from gpt import GptChat
 from util import save_file
 from objects import Conversation, Prompt, Summary
+from latex import LatexSection, LatexSubSection
+import arxiv
 
 class Bot(GptChat):
     conversations: List[Conversation]
@@ -66,57 +70,24 @@ class Researcher(Bot):
         super().__init__('researcher')
         self.summarizer = ReaserchSummarizer()
 
-    # Returns (Title, Abstract)
-    def get_abstract(self, paper_id: str) -> Tuple[str, str]:
-        abs_url = f'https://arxiv.org/abs/{paper_id}'
-        response = requests.get(abs_url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        abstract_elem = soup.find('blockquote', {'class': 'abstract'})
-        return (soup.title.string, abstract_elem.text)
-    
-    # returns (text, num_pages)
-    def get_paper_text(self, paper_id: str) -> Tuple[str, str]:
+    def read_paper_sections(self, paper_id: str, max_tokens: int, chunk_size: int, sections: List[LatexSection]):
+        print('Found paper source code')
+        log = ''
+        summary = ''
+        for section in sections:
+            section_text = ''
+            for subsection in section.subsections:
+                section_text += f'### {subsection.title}\n{subsection.content}'
+            (section_summary, section_log) = self.read_text(chunk_size, section_text)
+            summary += f'\n\n### {section.title}\n{section_summary}'
+            log += f'#### {section.title}\n{section_log}'
+
+        self.save_log(paper_id, log)
+
         pdf_url = f'https://arxiv.org/pdf/{paper_id}.pdf'
-        response = requests.get(pdf_url)
-        if response.status_code != 200:
-            print("Could not find pdf for paper")
-            return None
-        paper_file_name = paper_id.replace('.', '') + '.pdf'
-        if not os.path.exists(paper_file_name):
-            if not os.path.exists('papers'):
-                os.mkdir('papers')
-            with open('papers/' + paper_file_name, 'wb') as f:
-                f.write(response.content)
-        pdfReader = PyPDF2.PdfReader(io.BytesIO(response.content))
-        text = ''
-        for page_num in range(0, len(pdfReader.pages)):
-            page = pdfReader.pages[page_num].extract_text()
-            text += ' ' + page
-        return (text,  len(pdfReader.pages))
+        return Summary(paper_id, summary, pdf_url)
 
-    def read_paper(self, paper_id: str, max_tokens: int = 30000, chunk_size: int = 2500) -> Summary | None:
-        (title, abstract) = self.get_abstract(paper_id)
-        print(f'Title: {title}')
-        print(abstract)
-
-        should_read = input('Read paper?: ')
-        if should_read.lower() != 'yes':
-            return None
-        print('What should I keep in mind while reading the paper? (leave blank if no notes)')
-        notes = input('Notes: ')
-
-        print("Downloading pdf")
-        (text, num_pages) = self.get_paper_text(paper_id)
-        tokens = self.encoding.encode(text) 
-        print(f"Paper has {num_pages} pages and {len(tokens)} total tokens")
-
-        if len(tokens) > max_tokens:
-            print(f'Token count over read limit, removing {len(tokens) - max_tokens} tokens')
-            print('Consider raising the maximum read tokens')
-            tokens = tokens[:max_tokens]
-            if input('Continue?(Y/n): ') != 'Y':
-                return None
-
+    def read_text(self, chunk_size: int, text: str):
         first = False
         processed_tokens = 0
         summary_list = []
@@ -145,13 +116,53 @@ class Researcher(Bot):
         
         log += f'Overall Summary:\n{overall_summary}'
 
+        return (overall_summary, log)
+
+    def save_log(self, paper_id: str, log: str):
         print('Saving Log')
         if not os.path.exists('logs'):
             os.mkdir('logs')
         save_file(f'logs/arxiv_{paper_id}.txt', log)
 
+    def read_paper_text(self, paper_id: str, chunk_size: int, text: str):
+        (overall_summary, log) = self.read_text(chunk_size, text)
+        print(f'Used {self.total_tokens + self.summarizer.total_tokens} tokens in total')
+
+        self.save_log(paper_id, log)
+
         pdf_url = f'https://arxiv.org/pdf/{paper_id}.pdf'
         return Summary(title, overall_summary, pdf_url)
+
+    def read_paper(self, paper_id: str, max_tokens: int = 30000, chunk_size: int = 2500) -> Summary | None:
+        (title, abstract) = arxiv.get_abstract(paper_id)
+        print(f'Title: {title}')
+        print(abstract)
+
+        should_read = input('Read paper?: ')
+        if should_read.lower() != 'yes':
+            return None
+        print('What should I keep in mind while reading the paper? (leave blank if no notes)')
+        notes = input('Notes: ')
+
+        print("Downloading pdf")
+        (text, num_pages) = arxiv.get_paper_text(paper_id)
+        tokens = self.encoding.encode(text)
+        print(f"Paper has {num_pages} pages and {len(tokens)} total tokens")
+        if len(tokens) > max_tokens:
+            print(f'Token count over read limit, removing {len(tokens) - max_tokens} tokens')
+            print('Consider raising the maximum read tokens')
+            tokens = tokens[:max_tokens]
+            if input('Continue with truncated data?(Y/n): ') != 'Y':
+                return None
+        print('Looking for LaTex source code for paper...')
+        sections = arxiv.get_sections(paper_id)
+        summary = None
+        if sections is None:
+            print('Could not find source code. Summarizing raw pdf text')
+            summary = self.read_paper_text(paper_id, chunk_size, text)
+        else:
+            summary = self.read_paper_sections(paper_id, max_tokens, chunk_size, sections)
+        return summary
     
     def read_chunk(self, current_summary: str, chunk: List[int], first: bool, notes: str) -> str:
         text = self.encoding.decode(chunk)
