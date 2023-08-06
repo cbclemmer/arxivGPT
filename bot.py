@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from gpt import GptChat
 from util import save_file
 from objects import Conversation, Prompt, Summary
-from latex import LatexSection, LatexSubSection
+from latex import LatexSection
 import arxiv
 
 class Bot(GptChat):
@@ -71,7 +71,6 @@ class Researcher(Bot):
         self.summarizer = ReaserchSummarizer()
 
     def read_paper_sections(self, paper_id: str, max_tokens: int, chunk_size: int, sections: List[LatexSection]):
-        print('Found paper source code')
         log = ''
         summary = ''
         for section in sections:
@@ -144,7 +143,6 @@ class Researcher(Bot):
         print('What should I keep in mind while reading the paper? (leave blank if no notes)')
         notes = input('Notes: ')
 
-        print("Downloading pdf")
         (text, num_pages) = arxiv.get_paper_text(paper_id)
         tokens = self.encoding.encode(text)
         print(f"Paper has {num_pages} pages and {len(tokens)} total tokens")

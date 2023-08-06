@@ -4,3 +4,7 @@ completions
 summaries
 papers/
 __pycache__/
+env/
+source/
+html_logs/
+latex/

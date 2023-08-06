@@ -61,6 +61,6 @@ config = json.loads(open_file('config.json'))
 
 max_tokens = 30000
 if 'max_tokens' in config:
-    max_tokens = config['max_tokens']
+    max_tokens = int(config['max_tokens'])
 
 ArxivGPT(config["openai_key"]).read_paper(paper_id, max_tokens)

@@ -1,7 +1,10 @@
+import os
 import json
 from util import open_file, save_file
 
 def generate_html(title: str, completions_file: str) -> str:
+  if not os.path.exists(completions_file):
+    return ''
   # conversation indexes
   new_summary_idx = 6
 
