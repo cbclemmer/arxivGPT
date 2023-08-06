@@ -1,1 +1,2 @@
-Separate the paper into sections and summarize each
+Figure out how latex projects are organized and find a way to extract only the relevant information from them.
+Create a new latex parser, latexmk is a little complicated...
