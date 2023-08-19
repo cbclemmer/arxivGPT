@@ -42,22 +42,23 @@ class LatexParser:
         self.parse()
 
     def parse_command(self, command, command_data):
+        # print(f'COMMAND: {command} - {command_data}')
         if command == 'section':
-            if self.current_sub_section != None and self.current_sub_section.content != '':
+            if self.current_sub_section != None and self.current_sub_section.content.strip() != '':
                 self.current_section.subsections.append(self.current_sub_section)
-            if self.current_section != None:
+            if self.current_section != None and len(self.current_section.subsections) > 0:
                 self.sections.append(self.current_section)
             self.current_section = LatexSection(command_data)
-            self.current_sub_section = LatexSubsection('', '')
+            self.current_sub_section = LatexSubsection('Begin Section', '')
         if command == 'subsection':
-            if self.current_sub_section is not None:
+            if self.current_sub_section is not None and self.current_sub_section.content.strip() != '':
                 self.current_section.subsections.append(self.current_sub_section)
             self.current_sub_section = LatexSubsection(command_data)
         if command == 'begin':
             self.skipping = command_data != 'document'
         if command == 'end':
-            self.skipping = command_data != 'document'
-        if command == 'textbf' and not self.skipping and self.current_sub_section != None:
+            self.skipping = False
+        if (command == 'textbf' or command == 'emph' or command == 'textit') and not self.skipping and self.current_sub_section != None:
             self.current_sub_section.content += command_data
 
     def parse(self):
@@ -66,14 +67,14 @@ class LatexParser:
         last_c = ''
 
         for c in self.text:
-            if c == '\\':
+            if c == '\\' and command is None:
                 command = ''
                 continue
             if command is not None:
                 if c == '{':
                     command_data = ''
                     continue
-                if c == '}' or (c == ' ' and command_data is None):
+                if c == '}' or ((c == ' ' or c == '\n') and command_data is None):
                     self.parse_command(command, command_data)
                     command = None
                     command_data = None
