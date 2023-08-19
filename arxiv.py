@@ -108,6 +108,5 @@ def get_sections(paper_id: str):
                 f.write(latex_data)
         sections = read_latex_data(latex_data)
     finally:
-        print('TEST')
-        # shutil.rmtree('tmp')
+        shutil.rmtree('tmp')
     return sections

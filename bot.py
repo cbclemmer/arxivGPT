@@ -63,21 +63,22 @@ class ReaserchSummarizer(Bot):
             self.add_message(summary, 'user')
             self.add_message('Ok, I\'m ready for the next note', 'assistant')
         print(f'All Summaries are {total_summary_tokens} tokens')
-        return self.send('That is all the summaries, what is the new overall summary?', 700)
+        return self.send('That is all the summaries, what is the new overall summary?', 200)
 
 class Researcher(Bot):
     def __init__(self):
         super().__init__('researcher')
         self.summarizer = ReaserchSummarizer()
 
-    def read_paper_sections(self, paper_id: str, max_tokens: int, chunk_size: int, sections: List[LatexSection]):
+    def read_paper_sections(self, paper_id: str, max_tokens: int, chunk_size: int, sections: List[LatexSection], notes: str):
         log = ''
         summary = ''
         for section in sections:
             section_text = ''
             for subsection in section.subsections:
                 section_text += f'### {subsection.title}\n{subsection.content}'
-            (section_summary, section_log) = self.read_text(chunk_size, section_text)
+            print(f'Reading Section: {section.title}')
+            (section_summary, section_log) = self.read_text(section.title, chunk_size, section_text, notes)
             summary += f'\n\n### {section.title}\n{section_summary}'
             log += f'#### {section.title}\n{section_log}'
 
@@ -86,13 +87,14 @@ class Researcher(Bot):
         pdf_url = f'https://arxiv.org/pdf/{paper_id}.pdf'
         return Summary(paper_id, summary, pdf_url)
 
-    def read_text(self, chunk_size: int, text: str):
+    def read_text(self, title: str, chunk_size: int, text: str, notes: str):
         first = False
         processed_tokens = 0
         summary_list = []
         last_summary = ''
         overall_summary = ''
         log = f'{title} Reading Log\n'
+        tokens = self.encoding.encode(text)
         while len(tokens) > 0:
             chunk = tokens[:chunk_size]
             tokens = tokens[chunk_size:]
@@ -103,10 +105,7 @@ class Researcher(Bot):
 
             if len(summary_list) > 4:
                 summary_list = summary_list[1:5]
-            if len(summary_list) > 1:
-                overall_summary = self.summarizer.summarize_chunk_list(overall_summary, summary_list)
-            else:
-                overall_summary = last_summary
+            overall_summary = self.summarizer.summarize_chunk_list(overall_summary, summary_list)
             print(f'\n\n\nOverall Summary:{overall_summary}\n\n\n')
             print(f'\n\n\nCurrent Summary:{last_summary}\n\n\n')
             processed_tokens += chunk_size
@@ -124,7 +123,7 @@ class Researcher(Bot):
         save_file(f'logs/arxiv_{paper_id}.txt', log)
 
     def read_paper_text(self, paper_id: str, chunk_size: int, text: str):
-        (overall_summary, log) = self.read_text(chunk_size, text)
+        (overall_summary, log) = self.read_text(paper_id, chunk_size, text)
         print(f'Used {self.total_tokens + self.summarizer.total_tokens} tokens in total')
 
         self.save_log(paper_id, log)
@@ -159,7 +158,7 @@ class Researcher(Bot):
             print('Could not find source code. Summarizing raw pdf text')
             summary = self.read_paper_text(paper_id, chunk_size, text)
         else:
-            summary = self.read_paper_sections(paper_id, max_tokens, chunk_size, sections)
+            summary = self.read_paper_sections(paper_id, max_tokens, chunk_size, sections, notes)
         return summary
     
     def read_chunk(self, current_summary: str, chunk: List[int], first: bool, notes: str) -> str:
